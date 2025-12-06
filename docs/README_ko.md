@@ -56,9 +56,9 @@ filmspec <INPUT> [OPTIONS]
 | 옵션 | 단축 | 설명 | 기본값 |
 |------|------|------|--------|
 | `<INPUT>` | - | 입력 비디오 파일 경로 | 필수 |
-| `--output` | `-o` | 출력 이미지 경로 | `<파일명>_spectrum.png` 또는 `<파일명>_hue.png` |
+| `--output` | `-o` | 출력 이미지 경로 | `<파일명>_spectrum_slice.png` 또는 `<파일명>_spectrum_hue.png` |
 | `--width` | `-w` | 프레임 수 (h/v: 이미지 너비, r: 원주 프레임 수) | 1920 |
-| `--height` | `-H` | 밴드 길이 (h/v: 이미지 높이, r: 링 너비) | 300 (h/v), 800 (r) |
+| `--height` | `-H` | 밴드 길이 (h/v: 이미지 높이, r: 링 너비) | 300 (h/v), 500 (r) |
 | `--mode` | `-m` | 처리 모드: slice/hue | slice |
 | `--layout` | `-l` | 레이아웃 방향: h/v/r | h |
 | `--sample` | `-s` | 샘플 방향: row/col (slice 모드만) | row |

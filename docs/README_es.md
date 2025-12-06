@@ -56,9 +56,9 @@ filmspec <INPUT> [OPTIONS]
 | Opción | Corto | Descripción | Predeterminado |
 |--------|-------|-------------|----------------|
 | `<INPUT>` | - | Ruta del archivo de video | requerido |
-| `--output` | `-o` | Ruta de la imagen de salida | `<nombre>_spectrum.png` o `<nombre>_hue.png` |
+| `--output` | `-o` | Ruta de la imagen de salida | `<nombre>_spectrum_slice.png` o `<nombre>_spectrum_hue.png` |
 | `--width` | `-w` | Cantidad de fotogramas (h/v: ancho de imagen, r: fotogramas de circunferencia) | 1920 |
-| `--height` | `-H` | Longitud de banda (h/v: alto de imagen, r: ancho del anillo) | 300 (h/v), 800 (r) |
+| `--height` | `-H` | Longitud de banda (h/v: alto de imagen, r: ancho del anillo) | 300 (h/v), 500 (r) |
 | `--mode` | `-m` | Modo de procesamiento: slice/hue | slice |
 | `--layout` | `-l` | Dirección del diseño: h/v/r | h |
 | `--sample` | `-s` | Dirección de muestreo: row/col (solo modo slice) | row |

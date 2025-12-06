@@ -58,9 +58,9 @@ filmspec <INPUT> [OPTIONS]
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `<INPUT>` | - | Input video file path | required |
-| `--output` | `-o` | Output image path | `<filename>_spectrum.png` or `<filename>_hue.png` |
+| `--output` | `-o` | Output image path | `<filename>_spectrum_slice.png` or `<filename>_spectrum_hue.png` |
 | `--width` | `-w` | Frame count (h/v: image width, r: circumference frames) | 1920 |
-| `--height` | `-H` | Band length (h/v: image height, r: ring width) | 300 (h/v), 800 (r) |
+| `--height` | `-H` | Band length (h/v: image height, r: ring width) | 300 (h/v), 500 (r) |
 | `--mode` | `-m` | Process mode: slice/hue | slice |
 | `--layout` | `-l` | Layout direction: h/v/r | h |
 | `--sample` | `-s` | Sample direction: row/col (slice mode only) | row |

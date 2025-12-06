@@ -56,9 +56,9 @@ filmspec <INPUT> [OPTIONS]
 | オプション | 短縮形 | 説明 | デフォルト |
 |-----------|--------|------|-----------|
 | `<INPUT>` | - | 入力動画ファイルパス | 必須 |
-| `--output` | `-o` | 出力画像パス | `<ファイル名>_spectrum.png` または `<ファイル名>_hue.png` |
+| `--output` | `-o` | 出力画像パス | `<ファイル名>_spectrum_slice.png` または `<ファイル名>_spectrum_hue.png` |
 | `--width` | `-w` | フレーム数（h/v: 画像幅、r: 円周フレーム数） | 1920 |
-| `--height` | `-H` | バンド長（h/v: 画像高さ、r: リング幅） | 300 (h/v)、800 (r) |
+| `--height` | `-H` | バンド長（h/v: 画像高さ、r: リング幅） | 300 (h/v)、500 (r) |
 | `--mode` | `-m` | 処理モード: slice/hue | slice |
 | `--layout` | `-l` | レイアウト方向: h/v/r | h |
 | `--sample` | `-s` | サンプル方向: row/col（sliceモードのみ） | row |

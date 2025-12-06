@@ -87,8 +87,8 @@ impl ProcessMode {
     /// 获取输出文件后缀
     pub fn output_suffix(&self) -> &'static str {
         match self {
-            ProcessMode::Slice => "_spectrum",
-            ProcessMode::Hue => "_hue",
+            ProcessMode::Slice => "_spectrum_slice",
+            ProcessMode::Hue => "_spectrum_hue",
         }
     }
 }

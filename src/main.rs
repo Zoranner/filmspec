@@ -70,7 +70,7 @@ fn main() -> Result<()> {
 
     // 根据布局模式设置默认值
     let (default_width, default_height) = match layout_mode {
-        LayoutMode::Radial => (1920, 800), // 环形模式：帧数1920，色带长度800
+        LayoutMode::Radial => (1920, 500), // 环形模式：帧数1920，色带长度800
         _ => (1920, 300),                  // 水平/垂直模式默认值
     };
 

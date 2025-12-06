@@ -56,9 +56,9 @@ filmspec <INPUT> [OPTIONS]
 | Option | Court | Description | Défaut |
 |--------|-------|-------------|--------|
 | `<INPUT>` | - | Chemin du fichier vidéo | requis |
-| `--output` | `-o` | Chemin de l'image de sortie | `<nom>_spectrum.png` ou `<nom>_hue.png` |
+| `--output` | `-o` | Chemin de l'image de sortie | `<nom>_spectrum_slice.png` ou `<nom>_spectrum_hue.png` |
 | `--width` | `-w` | Nombre d'images (h/v: largeur d'image, r: images de circonférence) | 1920 |
-| `--height` | `-H` | Longueur de bande (h/v: hauteur d'image, r: largeur d'anneau) | 300 (h/v), 800 (r) |
+| `--height` | `-H` | Longueur de bande (h/v: hauteur d'image, r: largeur d'anneau) | 300 (h/v), 500 (r) |
 | `--mode` | `-m` | Mode de traitement: slice/hue | slice |
 | `--layout` | `-l` | Direction de disposition: h/v/r | h |
 | `--sample` | `-s` | Direction d'échantillonnage: row/col (mode slice uniquement) | row |

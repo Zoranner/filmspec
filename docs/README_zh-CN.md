@@ -56,9 +56,9 @@ filmspec <INPUT> [OPTIONS]
 | 参数 | 短选项 | 说明 | 默认值 |
 |------|--------|------|--------|
 | `<INPUT>` | - | 输入视频文件路径 | 必填 |
-| `--output` | `-o` | 输出图片路径 | `<文件名>_spectrum.png` 或 `<文件名>_hue.png` |
+| `--output` | `-o` | 输出图片路径 | `<文件名>_spectrum_slice.png` 或 `<文件名>_spectrum_hue.png` |
 | `--width` | `-w` | 帧数量（h/v: 图片宽度，r: 圆周帧数） | 1920 |
-| `--height` | `-H` | 色带长度（h/v: 图片高度，r: 圆环宽度） | 300 (h/v)，800 (r) |
+| `--height` | `-H` | 色带长度（h/v: 图片高度，r: 圆环宽度） | 300 (h/v)，500 (r) |
 | `--mode` | `-m` | 处理模式：slice/hue | slice |
 | `--layout` | `-l` | 布局方向：h/v/r | h |
 | `--sample` | `-s` | 采样方向：row/col（仅 slice 模式） | row |
