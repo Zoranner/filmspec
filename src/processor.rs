@@ -15,9 +15,11 @@ pub struct ProcessorConfig {
     pub frame_count: u32,
     /// 色带长度（像素数，取决于输出尺寸和布局方向）
     pub band_length: u32,
+    /// 内圆半径（仅环形布局使用）
+    pub inner_radius: u32,
     /// 采样模式（行/列，仅 Slice 模式使用）
     pub sample_mode: SampleMode,
-    /// 布局方向（水平/垂直）
+    /// 布局方向（水平/垂直/环形）
     pub layout_mode: LayoutMode,
     /// 处理模式（像素条/色调）
     pub process_mode: ProcessMode,
@@ -49,6 +51,7 @@ impl Processor {
                     &video_info,
                     self.config.frame_count,
                     self.config.band_length,
+                    self.config.inner_radius,
                     self.config.layout_mode,
                 )?
             }
@@ -59,11 +62,13 @@ impl Processor {
                     &video_info,
                     self.config.frame_count,
                     self.config.band_length,
+                    self.config.inner_radius,
                     self.config.layout_mode,
                 )?
             }
         };
 
+        println!("→ Saving image...");
         image.save(output_path)?;
         Ok(())
     }

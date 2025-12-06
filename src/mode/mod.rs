@@ -4,14 +4,16 @@
 //! 新增模式只需实现 `SpectrumMode` trait 并在此模块注册即可。
 
 pub mod hue;
+mod layout;
 pub mod slice;
 
 pub use hue::HueMode;
 pub use slice::SliceMode;
 
 use std::path::Path;
+use std::str::FromStr;
 
-use image::RgbImage;
+use image::DynamicImage;
 
 use crate::ffmpeg::VideoInfo;
 use crate::Result;
@@ -22,6 +24,8 @@ pub enum LayoutMode {
     Vertical,
     #[default]
     Horizontal,
+    /// 环形布局（从中心向外扩展，类似CD光碟）
+    Radial,
 }
 
 /// 光谱生成模式 trait
@@ -45,8 +49,9 @@ pub trait SpectrumMode {
         video_info: &VideoInfo,
         frame_count: u32,
         band_length: u32,
+        inner_radius: u32,
         layout_mode: LayoutMode,
-    ) -> Result<RgbImage>;
+    ) -> Result<DynamicImage>;
 }
 
 /// 处理模式枚举
@@ -59,15 +64,18 @@ pub enum ProcessMode {
     Hue,
 }
 
-impl ProcessMode {
-    /// 从字符串解析模式
-    pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
+impl FromStr for ProcessMode {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
             "hue" | "dominant" | "color" => ProcessMode::Hue,
             _ => ProcessMode::Slice,
-        }
+        })
     }
+}
 
+impl ProcessMode {
     /// 获取模式的名称
     pub fn name(&self) -> &'static str {
         match self {
@@ -84,4 +92,3 @@ impl ProcessMode {
         }
     }
 }
-

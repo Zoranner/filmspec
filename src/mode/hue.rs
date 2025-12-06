@@ -4,8 +4,9 @@
 
 use std::path::Path;
 
-use image::{ImageBuffer, Rgb, RgbImage};
+use image::{DynamicImage, Rgb};
 
+use super::layout::render_spectrum;
 use super::{LayoutMode, SpectrumMode};
 use crate::color::HueHistogram;
 use crate::ffmpeg::VideoInfo;
@@ -52,10 +53,9 @@ impl SpectrumMode for HueMode {
         video_info: &VideoInfo,
         frame_count: u32,
         band_length: u32,
+        inner_radius: u32,
         layout_mode: LayoutMode,
-    ) -> Result<RgbImage> {
-        println!("Extracting {} frames for hue analysis...", frame_count);
-
+    ) -> Result<DynamicImage> {
         let (frames_data, actual_frame_count) = FFmpeg::extract_frames_to_memory(
             video_path,
             frame_count,
@@ -64,14 +64,11 @@ impl SpectrumMode for HueMode {
             video_info.duration,
         )?;
 
-        println!(
-            "Extracted {} frames, analyzing dominant colors...",
-            actual_frame_count
-        );
-
         if actual_frame_count == 0 {
             return Err(Error::NoFramesExtracted);
         }
+
+        println!("→ Analyzing colors...");
 
         // 计算每帧的主色调
         let dominant_colors: Vec<Rgb<u8>> = frames_data
@@ -79,7 +76,18 @@ impl SpectrumMode for HueMode {
             .map(|frame_data| calculate_dominant_hue(frame_data))
             .collect();
 
-        let image = build_hue_spectrum(&dominant_colors, band_length, layout_mode);
+        println!("→ Building spectrum...");
+
+        // 使用统一的布局渲染函数
+        // 色调模式下，整个径向使用同一颜色
+        let image = render_spectrum(
+            dominant_colors.len(),
+            band_length,
+            inner_radius,
+            layout_mode,
+            |frame_idx, _band_idx| dominant_colors[frame_idx],
+        );
+
         Ok(image)
     }
 }
@@ -96,34 +104,3 @@ fn calculate_dominant_hue(image_data: &[u8]) -> Rgb<u8> {
 
     histogram.get_dominant_color()
 }
-
-/// 构建色调光谱图像
-fn build_hue_spectrum(
-    dominant_colors: &[Rgb<u8>],
-    band_length: u32,
-    layout_mode: LayoutMode,
-) -> RgbImage {
-    let frame_count = dominant_colors.len();
-
-    match layout_mode {
-        LayoutMode::Horizontal => {
-            let mut image: RgbImage = ImageBuffer::new(frame_count as u32, band_length);
-            for (x, color) in dominant_colors.iter().enumerate() {
-                for y in 0..band_length {
-                    image.put_pixel(x as u32, y, *color);
-                }
-            }
-            image
-        }
-        LayoutMode::Vertical => {
-            let mut image: RgbImage = ImageBuffer::new(band_length, frame_count as u32);
-            for (y, color) in dominant_colors.iter().enumerate() {
-                for x in 0..band_length {
-                    image.put_pixel(x, y as u32, *color);
-                }
-            }
-            image
-        }
-    }
-}
-

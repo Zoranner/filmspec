@@ -32,6 +32,7 @@ Filmspec sampelt gleichmäßig Frames aus einer Videodatei über die Zeit, verar
 |--------------|--------------|
 | h | Horizontal stapeln (links nach rechts) |
 | v | Vertikal stapeln (oben nach unten) |
+| r | Radiales Layout (scheibenförmig, wie eine CD) |
 
 #### Voraussetzungen
 
@@ -56,11 +57,12 @@ filmspec <INPUT> [OPTIONS]
 |--------|------|--------------|----------|
 | `<INPUT>` | - | Eingabe-Videodateipfad | erforderlich |
 | `--output` | `-o` | Ausgabe-Bildpfad | `<Dateiname>_spectrum.png` oder `<Dateiname>_hue.png` |
-| `--width` | `-w` | Ausgabe-Bildbreite | 1920 |
-| `--height` | `-H` | Ausgabe-Bildhöhe | 300 |
+| `--width` | `-w` | Frame-Anzahl (h/v: Bildbreite, r: Umfang-Frames) | 1920 |
+| `--height` | `-H` | Bandlänge (h/v: Bildhöhe, r: Ringbreite) | 300 (h/v), 800 (r) |
 | `--mode` | `-m` | Verarbeitungsmodus: slice/hue | slice |
-| `--layout` | `-l` | Layout-Richtung: h/v | h |
+| `--layout` | `-l` | Layout-Richtung: h/v/r | h |
 | `--sample` | `-s` | Sample-Richtung: row/col (nur Slice-Modus) | row |
+| `--inner-radius` | - | Innerer Radius für radiales Layout (Pixel) | 250 |
 
 #### Beispiele
 
@@ -82,6 +84,15 @@ filmspec movie.mp4 -s col
 
 # Hue-Modus + vertikales Layout
 filmspec movie.mp4 -m hue -l v -w 400 -H 1920
+
+# Radiales Layout (scheibenförmiges Spektrum)
+filmspec movie.mp4 -l r
+
+# Radiales Layout + benutzerdefinierte Parameter
+filmspec movie.mp4 -l r -w 2400 -H 600 --inner-radius 200
+
+# Hue-Modus + radiales Layout
+filmspec movie.mp4 -m hue -l r
 ```
 
 #### Lizenz

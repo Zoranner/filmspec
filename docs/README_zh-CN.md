@@ -32,6 +32,7 @@ Filmspec 按时间均匀采样视频帧，根据所选模式处理每一帧，�
 |---------|------|
 | h | 水平堆叠（从左到右） |
 | v | 垂直堆叠（从上到下） |
+| r | 环形布局（圆盘状，类似 CD 光碟） |
 
 #### 前置要求
 
@@ -56,11 +57,12 @@ filmspec <INPUT> [OPTIONS]
 |------|--------|------|--------|
 | `<INPUT>` | - | 输入视频文件路径 | 必填 |
 | `--output` | `-o` | 输出图片路径 | `<文件名>_spectrum.png` 或 `<文件名>_hue.png` |
-| `--width` | `-w` | 输出图片宽度 | 1920 |
-| `--height` | `-H` | 输出图片高度 | 300 |
+| `--width` | `-w` | 帧数量（h/v: 图片宽度，r: 圆周帧数） | 1920 |
+| `--height` | `-H` | 色带长度（h/v: 图片高度，r: 圆环宽度） | 300 (h/v)，800 (r) |
 | `--mode` | `-m` | 处理模式：slice/hue | slice |
-| `--layout` | `-l` | 布局方向：h/v | h |
+| `--layout` | `-l` | 布局方向：h/v/r | h |
 | `--sample` | `-s` | 采样方向：row/col（仅 slice 模式） | row |
+| `--inner-radius` | - | 环形布局内圆半径（像素） | 250 |
 
 #### 示例
 
@@ -82,6 +84,15 @@ filmspec movie.mp4 -s col
 
 # 色调模式 + 垂直布局
 filmspec movie.mp4 -m hue -l v -w 400 -H 1920
+
+# 环形布局（圆盘状光谱）
+filmspec movie.mp4 -l r
+
+# 环形布局 + 自定义参数
+filmspec movie.mp4 -l r -w 2400 -H 600 --inner-radius 200
+
+# 色调模式 + 环形布局
+filmspec movie.mp4 -m hue -l r
 ```
 
 #### 许可证

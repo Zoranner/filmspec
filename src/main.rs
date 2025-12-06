@@ -20,17 +20,21 @@ struct Cli {
     #[arg(short, long)]
     output: Option<PathBuf>,
 
-    /// Output image width in pixels
-    #[arg(short, long, default_value = "1920")]
-    width: u32,
+    /// Output image width in pixels (default: 1920 for h/v, 800 for radial)
+    #[arg(short, long)]
+    width: Option<u32>,
 
-    /// Output image height in pixels
-    #[arg(short = 'H', long, default_value = "300")]
-    height: u32,
+    /// Output image height in pixels (default: 300 for h/v, 200 for radial)
+    #[arg(short = 'H', long)]
+    height: Option<u32>,
 
-    /// Layout direction: h (horizontal, left to right) or v (vertical, top to bottom)
+    /// Layout direction: h (horizontal), v (vertical), or r (radial/disc)
     #[arg(short, long, default_value = "h")]
     layout: String,
+
+    /// Inner radius for radial layout (pixels)
+    #[arg(long, default_value = "250")]
+    inner_radius: u32,
 
     /// Sample direction: row (middle horizontal line) or col (middle vertical line)
     /// Only used in slice mode
@@ -45,7 +49,7 @@ struct Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let process_mode = ProcessMode::from_str(&cli.mode);
+    let process_mode: ProcessMode = cli.mode.parse().unwrap();
 
     let output_path = cli.output.unwrap_or_else(|| {
         let stem = cli
@@ -56,21 +60,39 @@ fn main() -> Result<()> {
         PathBuf::from(format!("{}{}.png", stem, process_mode.output_suffix()))
     });
 
-    let sample_mode = SampleMode::from_str(&cli.sample);
+    let sample_mode: SampleMode = cli.sample.parse().unwrap();
 
     let layout_mode = match cli.layout.to_lowercase().as_str() {
         "vertical" | "v" => LayoutMode::Vertical,
+        "radial" | "r" | "disc" | "ring" => LayoutMode::Radial,
         _ => LayoutMode::Horizontal,
     };
 
-    let (frame_count, band_length) = match layout_mode {
-        LayoutMode::Horizontal => (cli.width, cli.height),
-        LayoutMode::Vertical => (cli.height, cli.width),
+    // 根据布局模式设置默认值
+    let (default_width, default_height) = match layout_mode {
+        LayoutMode::Radial => (1920, 800), // 环形模式：帧数1920，色带长度800
+        _ => (1920, 300),                  // 水平/垂直模式默认值
+    };
+
+    let width = cli.width.unwrap_or(default_width);
+    let height = cli.height.unwrap_or(default_height);
+
+    let (frame_count, band_length, inner_radius) = match layout_mode {
+        LayoutMode::Horizontal => (width, height, 0),
+        LayoutMode::Vertical => (height, width, 0),
+        LayoutMode::Radial => {
+            // 环形布局：
+            // - frame_count = 帧数（沿圆周方向）
+            // - band_length = 圆环宽度（径向方向，即每个像素条的长度）
+            // - 输出图像尺寸 = (inner_radius + band_length) * 2
+            (width, height, cli.inner_radius)
+        }
     };
 
     let config = ProcessorConfig {
         frame_count,
         band_length,
+        inner_radius,
         sample_mode,
         layout_mode,
         process_mode,
@@ -78,23 +100,43 @@ fn main() -> Result<()> {
 
     let processor = Processor::new(config);
 
-    println!("Processing: {}", cli.input.display());
-    println!(
-        "Output: {} ({}×{})",
-        output_path.display(),
-        cli.width,
-        cli.height
-    );
-    println!("Mode: {}, Layout: {}", process_mode.name(), cli.layout);
-    if matches!(process_mode, ProcessMode::Slice) {
-        println!("Sample: {}", cli.sample);
+    // 打印配置信息
+    println!("Input:  {}", cli.input.display());
+    println!("Output: {}", output_path.display());
+
+    match layout_mode {
+        LayoutMode::Radial => {
+            let output_size = (inner_radius + band_length) * 2;
+            println!(
+                "Config: {} | Radial {}×{} | {} frames | ring {} (inner {})",
+                process_mode.name(),
+                output_size,
+                output_size,
+                frame_count,
+                band_length,
+                inner_radius
+            );
+        }
+        LayoutMode::Horizontal => {
+            print!("Config: {} | Horizontal {}×{}", process_mode.name(), width, height);
+            if matches!(process_mode, ProcessMode::Slice) {
+                print!(" | sample: {}", cli.sample);
+            }
+            println!();
+        }
+        LayoutMode::Vertical => {
+            print!("Config: {} | Vertical {}×{}", process_mode.name(), height, width);
+            if matches!(process_mode, ProcessMode::Slice) {
+                print!(" | sample: {}", cli.sample);
+            }
+            println!();
+        }
     }
     println!();
 
     processor.generate_spectrum(&cli.input, &output_path)?;
 
-    println!();
-    println!("Spectrum generated successfully!");
+    println!("Done!");
 
     Ok(())
 }

@@ -75,11 +75,7 @@ impl Hsv {
     /// 转换为 RGB<u8>
     pub fn to_rgb_u8(&self) -> Rgb<u8> {
         let (r, g, b) = self.to_rgb();
-        Rgb([
-            (r * 255.0) as u8,
-            (g * 255.0) as u8,
-            (b * 255.0) as u8,
-        ])
+        Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8])
     }
 
     /// 增强饱和度和明度
@@ -129,7 +125,7 @@ impl HueHistogram {
 
         // 低饱和度视为灰色，不参与色相统计
         if hsv.is_gray(0.15, 0.1) {
-            let gray = ((r as u64 + g as u64 + b as u64) / 3) as u64;
+            let gray = (r as u64 + g as u64 + b as u64) / 3;
             self.gray_sum += gray;
             self.gray_count += 1;
             return;
@@ -219,4 +215,3 @@ mod tests {
         assert!((b - original.2).abs() < 0.01);
     }
 }
-

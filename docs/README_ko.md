@@ -32,6 +32,7 @@ Filmspec은 비디오에서 균등하게 프레임을 샘플링하고, 선택한
 |--------------|------|
 | h | 수평 스택 (왼쪽에서 오른쪽) |
 | v | 수직 스택 (위에서 아래) |
+| r | 방사형 레이아웃 (CD처럼 원반 모양) |
 
 #### 사전 요구사항
 
@@ -56,11 +57,12 @@ filmspec <INPUT> [OPTIONS]
 |------|------|------|--------|
 | `<INPUT>` | - | 입력 비디오 파일 경로 | 필수 |
 | `--output` | `-o` | 출력 이미지 경로 | `<파일명>_spectrum.png` 또는 `<파일명>_hue.png` |
-| `--width` | `-w` | 출력 이미지 너비 | 1920 |
-| `--height` | `-H` | 출력 이미지 높이 | 300 |
+| `--width` | `-w` | 프레임 수 (h/v: 이미지 너비, r: 원주 프레임 수) | 1920 |
+| `--height` | `-H` | 밴드 길이 (h/v: 이미지 높이, r: 링 너비) | 300 (h/v), 800 (r) |
 | `--mode` | `-m` | 처리 모드: slice/hue | slice |
-| `--layout` | `-l` | 레이아웃 방향: h/v | h |
+| `--layout` | `-l` | 레이아웃 방향: h/v/r | h |
 | `--sample` | `-s` | 샘플 방향: row/col (slice 모드만) | row |
+| `--inner-radius` | - | 방사형 레이아웃 내부 반경 (픽셀) | 250 |
 
 #### 예시
 
@@ -82,6 +84,15 @@ filmspec movie.mp4 -s col
 
 # 색조 모드 + 수직 레이아웃
 filmspec movie.mp4 -m hue -l v -w 400 -H 1920
+
+# 방사형 레이아웃 (원반 모양 스펙트럼)
+filmspec movie.mp4 -l r
+
+# 방사형 레이아웃 + 사용자 정의 매개변수
+filmspec movie.mp4 -l r -w 2400 -H 600 --inner-radius 200
+
+# 색조 모드 + 방사형 레이아웃
+filmspec movie.mp4 -m hue -l r
 ```
 
 #### 라이선스

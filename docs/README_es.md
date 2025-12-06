@@ -32,6 +32,7 @@ Filmspec muestrea uniformemente fotogramas de un archivo de video a lo largo del
 |----------------|-------------|
 | h | Apilar horizontalmente (izquierda a derecha) |
 | v | Apilar verticalmente (arriba a abajo) |
+| r | Diseño radial (forma de disco, como un CD) |
 
 #### Requisitos Previos
 
@@ -56,11 +57,12 @@ filmspec <INPUT> [OPTIONS]
 |--------|-------|-------------|----------------|
 | `<INPUT>` | - | Ruta del archivo de video | requerido |
 | `--output` | `-o` | Ruta de la imagen de salida | `<nombre>_spectrum.png` o `<nombre>_hue.png` |
-| `--width` | `-w` | Ancho de la imagen | 1920 |
-| `--height` | `-H` | Alto de la imagen | 300 |
+| `--width` | `-w` | Cantidad de fotogramas (h/v: ancho de imagen, r: fotogramas de circunferencia) | 1920 |
+| `--height` | `-H` | Longitud de banda (h/v: alto de imagen, r: ancho del anillo) | 300 (h/v), 800 (r) |
 | `--mode` | `-m` | Modo de procesamiento: slice/hue | slice |
-| `--layout` | `-l` | Dirección del diseño: h/v | h |
+| `--layout` | `-l` | Dirección del diseño: h/v/r | h |
 | `--sample` | `-s` | Dirección de muestreo: row/col (solo modo slice) | row |
+| `--inner-radius` | - | Radio interno para diseño radial (píxeles) | 250 |
 
 #### Ejemplos
 
@@ -82,6 +84,15 @@ filmspec movie.mp4 -s col
 
 # Modo hue + diseño vertical
 filmspec movie.mp4 -m hue -l v -w 400 -H 1920
+
+# Diseño radial (espectro en forma de disco)
+filmspec movie.mp4 -l r
+
+# Diseño radial + parámetros personalizados
+filmspec movie.mp4 -l r -w 2400 -H 600 --inner-radius 200
+
+# Modo hue + diseño radial
+filmspec movie.mp4 -m hue -l r
 ```
 
 #### Licencia

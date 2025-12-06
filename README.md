@@ -34,6 +34,7 @@ Filmspec uniformly samples frames from a video file over time, processes each fr
 |-------------|-------------|
 | h | Stack horizontally (left to right) |
 | v | Stack vertically (top to bottom) |
+| r | Radial layout (disc-shaped, like a CD) |
 
 #### Prerequisites
 
@@ -58,11 +59,12 @@ filmspec <INPUT> [OPTIONS]
 |--------|-------|-------------|---------|
 | `<INPUT>` | - | Input video file path | required |
 | `--output` | `-o` | Output image path | `<filename>_spectrum.png` or `<filename>_hue.png` |
-| `--width` | `-w` | Output image width | 1920 |
-| `--height` | `-H` | Output image height | 300 |
+| `--width` | `-w` | Frame count (h/v: image width, r: circumference frames) | 1920 |
+| `--height` | `-H` | Band length (h/v: image height, r: ring width) | 300 (h/v), 800 (r) |
 | `--mode` | `-m` | Process mode: slice/hue | slice |
-| `--layout` | `-l` | Layout direction: h/v | h |
+| `--layout` | `-l` | Layout direction: h/v/r | h |
 | `--sample` | `-s` | Sample direction: row/col (slice mode only) | row |
+| `--inner-radius` | - | Inner radius for radial layout (pixels) | 250 |
 
 #### Examples
 
@@ -84,6 +86,15 @@ filmspec movie.mp4 -s col
 
 # Hue mode with vertical layout
 filmspec movie.mp4 -m hue -l v -w 400 -H 1920
+
+# Radial layout (disc-shaped spectrum)
+filmspec movie.mp4 -l r
+
+# Radial layout with custom parameters
+filmspec movie.mp4 -l r -w 2400 -H 600 --inner-radius 200
+
+# Hue mode with radial layout
+filmspec movie.mp4 -m hue -l r
 ```
 
 #### License

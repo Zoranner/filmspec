@@ -7,6 +7,12 @@
 //! - **Slice（像素条模式）**：从每帧提取一条像素线堆叠成光谱
 //! - **Hue（色调模式）**：分析每帧主色调，生成色调变化光谱
 //!
+//! # 布局模式
+//!
+//! - **Horizontal（水平布局）**：从左到右的时间轴
+//! - **Vertical（垂直布局）**：从上到下的时间轴
+//! - **Radial（环形布局）**：类似CD光碟的圆形布局，从12点钟方向顺时针
+//!
 //! # 示例
 //!
 //! ```ignore
@@ -15,6 +21,7 @@
 //! let config = ProcessorConfig {
 //!     frame_count: 1920,
 //!     band_length: 300,
+//!     inner_radius: 50,
 //!     sample_mode: SampleMode::Row,
 //!     layout_mode: LayoutMode::Horizontal,
 //!     process_mode: ProcessMode::Slice,

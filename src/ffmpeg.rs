@@ -133,7 +133,7 @@ impl FFmpeg {
         let progress_bar = ProgressBar::new(frame_count as u64);
         progress_bar.set_style(
             ProgressStyle::default_bar()
-                .template("{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} frames ({eta})")
+                .template("→ Extracting frames {spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
                 .expect("Invalid progress bar template")
                 .progress_chars("█▓░"),
         );
@@ -154,7 +154,13 @@ impl FFmpeg {
             }
         }
 
-        progress_bar.finish_and_clear();
+        let actual_frames = raw_data.len() / bytes_per_frame;
+        progress_bar.set_style(
+            ProgressStyle::default_bar()
+                .template("→ Extracting frames {msg}")
+                .expect("Invalid progress bar template"),
+        );
+        progress_bar.finish_with_message(format!("done ({} frames)", actual_frames));
 
         let stderr_output = stderr_thread.join().expect("stderr thread panicked");
         let status = child.wait()?;
@@ -215,7 +221,7 @@ impl FFmpeg {
         let progress_bar = ProgressBar::new(frame_count as u64);
         progress_bar.set_style(
             ProgressStyle::default_bar()
-                .template("{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} frames ({eta})")
+                .template("→ Extracting frames {spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
                 .expect("Invalid progress bar template")
                 .progress_chars("█▓░"),
         );
@@ -236,7 +242,13 @@ impl FFmpeg {
             }
         }
 
-        progress_bar.finish_and_clear();
+        let actual_frames = raw_data.len() / bytes_per_frame;
+        progress_bar.set_style(
+            ProgressStyle::default_bar()
+                .template("→ Extracting frames {msg}")
+                .expect("Invalid progress bar template"),
+        );
+        progress_bar.finish_with_message(format!("done ({} frames)", actual_frames));
 
         let stderr_output = stderr_thread.join().expect("stderr thread panicked");
         let status = child.wait()?;

@@ -3,9 +3,11 @@
 //! 从每帧提取一条像素线（行或列），堆叠成光谱图像。
 
 use std::path::Path;
+use std::str::FromStr;
 
-use image::{ImageBuffer, Rgb, RgbImage};
+use image::{DynamicImage, Rgb};
 
+use super::layout::render_spectrum;
 use super::{LayoutMode, SpectrumMode};
 use crate::ffmpeg::VideoInfo;
 use crate::{Error, FFmpeg, Result};
@@ -14,17 +16,18 @@ use crate::{Error, FFmpeg, Result};
 #[derive(Debug, Clone, Copy, Default)]
 pub enum SampleMode {
     #[default]
-    Row,    // 横向采样（提取中间行）
+    Row, // 横向采样（提取中间行）
     Column, // 纵向采样（提取中间列）
 }
 
-impl SampleMode {
-    /// 从字符串解析
-    pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
+impl FromStr for SampleMode {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
             "column" | "col" | "c" => SampleMode::Column,
             _ => SampleMode::Row,
-        }
+        })
     }
 }
 
@@ -58,10 +61,9 @@ impl SpectrumMode for SliceMode {
         video_info: &VideoInfo,
         frame_count: u32,
         band_length: u32,
+        inner_radius: u32,
         layout_mode: LayoutMode,
-    ) -> Result<RgbImage> {
-        println!("Extracting {} frames...", frame_count);
-
+    ) -> Result<DynamicImage> {
         let raw_data = FFmpeg::extract_strips_to_memory(
             video_path,
             frame_count,
@@ -73,53 +75,34 @@ impl SpectrumMode for SliceMode {
         let bytes_per_strip = band_length as usize * 3;
         let actual_frame_count = raw_data.len() / bytes_per_strip;
 
-        println!(
-            "Extracted {} strips ({} bytes)",
-            actual_frame_count,
-            raw_data.len()
-        );
-
         if actual_frame_count == 0 {
             return Err(Error::NoFramesExtracted);
         }
 
-        let image = build_spectrum(&raw_data, actual_frame_count, band_length, layout_mode);
+        println!("→ Building spectrum...");
+
+        // 使用统一的布局渲染函数
+        let image = render_spectrum(
+            actual_frame_count,
+            band_length,
+            inner_radius,
+            layout_mode,
+            |frame_idx, band_idx| {
+                let strip_offset = frame_idx * bytes_per_strip;
+                let pixel_offset = strip_offset + band_idx * 3;
+
+                if pixel_offset + 2 < raw_data.len() {
+                    Rgb([
+                        raw_data[pixel_offset],
+                        raw_data[pixel_offset + 1],
+                        raw_data[pixel_offset + 2],
+                    ])
+                } else {
+                    Rgb([0, 0, 0])
+                }
+            },
+        );
+
         Ok(image)
     }
 }
-
-/// 构建像素条光谱图像
-fn build_spectrum(
-    raw_data: &[u8],
-    frame_count: usize,
-    band_length: u32,
-    layout_mode: LayoutMode,
-) -> RgbImage {
-    let bytes_per_strip = band_length as usize * 3;
-
-    match layout_mode {
-        LayoutMode::Vertical => {
-            let mut image: RgbImage = ImageBuffer::new(band_length, frame_count as u32);
-            for (y, chunk) in raw_data.chunks(bytes_per_strip).enumerate() {
-                for (x, pixel) in chunk.chunks(3).enumerate() {
-                    if pixel.len() == 3 && (x as u32) < band_length {
-                        image.put_pixel(x as u32, y as u32, Rgb([pixel[0], pixel[1], pixel[2]]));
-                    }
-                }
-            }
-            image
-        }
-        LayoutMode::Horizontal => {
-            let mut image: RgbImage = ImageBuffer::new(frame_count as u32, band_length);
-            for (x, chunk) in raw_data.chunks(bytes_per_strip).enumerate() {
-                for (y, pixel) in chunk.chunks(3).enumerate() {
-                    if pixel.len() == 3 && (y as u32) < band_length {
-                        image.put_pixel(x as u32, y as u32, Rgb([pixel[0], pixel[1], pixel[2]]));
-                    }
-                }
-            }
-            image
-        }
-    }
-}
-

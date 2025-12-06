@@ -32,6 +32,7 @@ Filmspec échantillonne uniformément les images d'un fichier vidéo dans le tem
 |---------------------|-------------|
 | h | Empiler horizontalement (gauche à droite) |
 | v | Empiler verticalement (haut en bas) |
+| r | Disposition radiale (en forme de disque, comme un CD) |
 
 #### Prérequis
 
@@ -56,11 +57,12 @@ filmspec <INPUT> [OPTIONS]
 |--------|-------|-------------|--------|
 | `<INPUT>` | - | Chemin du fichier vidéo | requis |
 | `--output` | `-o` | Chemin de l'image de sortie | `<nom>_spectrum.png` ou `<nom>_hue.png` |
-| `--width` | `-w` | Largeur de l'image | 1920 |
-| `--height` | `-H` | Hauteur de l'image | 300 |
+| `--width` | `-w` | Nombre d'images (h/v: largeur d'image, r: images de circonférence) | 1920 |
+| `--height` | `-H` | Longueur de bande (h/v: hauteur d'image, r: largeur d'anneau) | 300 (h/v), 800 (r) |
 | `--mode` | `-m` | Mode de traitement: slice/hue | slice |
-| `--layout` | `-l` | Direction de disposition: h/v | h |
+| `--layout` | `-l` | Direction de disposition: h/v/r | h |
 | `--sample` | `-s` | Direction d'échantillonnage: row/col (mode slice uniquement) | row |
+| `--inner-radius` | - | Rayon intérieur pour la disposition radiale (pixels) | 250 |
 
 #### Exemples
 
@@ -82,6 +84,15 @@ filmspec movie.mp4 -s col
 
 # Mode hue + disposition verticale
 filmspec movie.mp4 -m hue -l v -w 400 -H 1920
+
+# Disposition radiale (spectre en forme de disque)
+filmspec movie.mp4 -l r
+
+# Disposition radiale + paramètres personnalisés
+filmspec movie.mp4 -l r -w 2400 -H 600 --inner-radius 200
+
+# Mode hue + disposition radiale
+filmspec movie.mp4 -m hue -l r
 ```
 
 #### Licence
