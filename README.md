@@ -6,16 +6,29 @@ A CLI tool to generate film spectrum images from video files.
 
 #### How It Works
 
-Filmspec uniformly samples frames from a video file over time, extracts a single pixel line (row or column) from each frame, and stacks them together to create a unique visual spectrum.
+Filmspec uniformly samples frames from a video file over time, processes each frame according to the selected mode, and generates a unique visual spectrum.
 
-![example](docs/images/example.png)
+**Slice Mode** - Extract pixel lines from each frame:
+
+![slice example](docs/images/example_slice.png)
+
+**Hue Mode** - Analyze dominant color of each frame:
+
+![hue example](docs/images/example_hue.png)
+
+#### Process Modes
+
+| Mode | Description |
+|------|-------------|
+| slice | Extract a pixel line (row or column) from each frame and stack them |
+| hue | Analyze dominant color of each frame and create a color band spectrum |
 
 #### Sample & Layout Modes
 
-| Slice Mode | Description |
-|------------|-------------|
-| row | Extract middle horizontal line from each frame |
-| col | Extract middle vertical line from each frame |
+| Sample Mode | Description |
+|-------------|-------------|
+| row | Extract middle horizontal line from each frame (slice mode only) |
+| col | Extract middle vertical line from each frame (slice mode only) |
 
 | Layout Mode | Description |
 |-------------|-------------|
@@ -44,17 +57,21 @@ filmspec <INPUT> [OPTIONS]
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `<INPUT>` | - | Input video file path | required |
-| `--output` | `-o` | Output image path | `<filename>_spectrum.png` |
+| `--output` | `-o` | Output image path | `<filename>_spectrum.png` or `<filename>_hue.png` |
 | `--width` | `-w` | Output image width | 1920 |
 | `--height` | `-H` | Output image height | 300 |
-| `--layout` | `-l` | Layout direction h/v | h |
-| `--slice` | `-s` | Slice direction row/col | row |
+| `--mode` | `-m` | Process mode: slice/hue | slice |
+| `--layout` | `-l` | Layout direction: h/v | h |
+| `--sample` | `-s` | Sample direction: row/col (slice mode only) | row |
 
 #### Examples
 
 ```bash
-# Default (1920×300, horizontal layout, row slice)
+# Default slice mode (1920×300, horizontal layout, row sample)
 filmspec movie.mp4
+
+# Hue spectrum mode (dominant color analysis)
+filmspec movie.mp4 -m hue
 
 # Custom output path and size
 filmspec movie.mp4 -o output.png -w 1280 -H 400
@@ -62,8 +79,11 @@ filmspec movie.mp4 -o output.png -w 1280 -H 400
 # Vertical layout (stack top to bottom)
 filmspec movie.mp4 -l v
 
-# Column slice (extract vertical pixel lines)
+# Column sample in slice mode (extract vertical pixel lines)
 filmspec movie.mp4 -s col
+
+# Hue mode with vertical layout
+filmspec movie.mp4 -m hue -l v -w 400 -H 1920
 ```
 
 #### License

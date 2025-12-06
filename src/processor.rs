@@ -1,106 +1,70 @@
+//! 视频光谱处理器
+//!
+//! 协调视频分析和光谱生成的主要处理器。
+
 use std::path::Path;
 
-use image::{ImageBuffer, Rgb, RgbImage};
+use crate::mode::hue::HueMode;
+use crate::mode::slice::{SampleMode, SliceMode};
+use crate::mode::{LayoutMode, ProcessMode, SpectrumMode};
+use crate::{FFmpeg, Result};
 
-use crate::{Error, FFmpeg, Result};
-
-#[derive(Debug, Clone, Copy, Default)]
-pub enum SampleMode {
-    #[default]
-    Row,
-    Column,
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub enum StackMode {
-    Vertical,
-    #[default]
-    Horizontal,
-}
-
+/// 处理器配置
 pub struct ProcessorConfig {
+    /// 帧数（取决于输出尺寸和布局方向）
     pub frame_count: u32,
-    pub strip_length: u32,
+    /// 色带长度（像素数，取决于输出尺寸和布局方向）
+    pub band_length: u32,
+    /// 采样模式（行/列，仅 Slice 模式使用）
     pub sample_mode: SampleMode,
-    pub stack_mode: StackMode,
+    /// 布局方向（水平/垂直）
+    pub layout_mode: LayoutMode,
+    /// 处理模式（像素条/色调）
+    pub process_mode: ProcessMode,
 }
 
+/// 视频光谱处理器
 pub struct Processor {
     config: ProcessorConfig,
 }
 
 impl Processor {
+    /// 创建新的处理器实例
     pub fn new(config: ProcessorConfig) -> Self {
         Self { config }
     }
 
+    /// 生成光谱图像
     pub fn generate_spectrum(&self, video_path: &Path, output_path: &Path) -> Result<()> {
         FFmpeg::check_availability()?;
 
         let video_info = FFmpeg::get_video_info(video_path)?;
 
-        println!("Extracting {} frames...", self.config.frame_count);
-        let raw_data = FFmpeg::extract_strips_to_memory(
-            video_path,
-            self.config.frame_count,
-            self.config.strip_length,
-            video_info.duration,
-            self.config.sample_mode,
-        )?;
+        // 根据处理模式选择对应的实现
+        let image = match self.config.process_mode {
+            ProcessMode::Slice => {
+                let mode = SliceMode::new(self.config.sample_mode);
+                mode.generate(
+                    video_path,
+                    &video_info,
+                    self.config.frame_count,
+                    self.config.band_length,
+                    self.config.layout_mode,
+                )?
+            }
+            ProcessMode::Hue => {
+                let mode = HueMode::new();
+                mode.generate(
+                    video_path,
+                    &video_info,
+                    self.config.frame_count,
+                    self.config.band_length,
+                    self.config.layout_mode,
+                )?
+            }
+        };
 
-        let bytes_per_strip = self.config.strip_length as usize * 3;
-        let actual_frame_count = raw_data.len() / bytes_per_strip;
-        println!(
-            "Extracted {} strips ({} bytes)",
-            actual_frame_count,
-            raw_data.len()
-        );
-
-        if actual_frame_count == 0 {
-            return Err(Error::NoFramesExtracted);
-        }
-
-        let spectrum = self.build_spectrum(&raw_data, actual_frame_count);
-        spectrum.save(output_path)?;
-
+        image.save(output_path)?;
         Ok(())
-    }
-
-    fn build_spectrum(&self, raw_data: &[u8], frame_count: usize) -> RgbImage {
-        let strip_length = self.config.strip_length;
-        let bytes_per_strip = strip_length as usize * 3;
-
-        match self.config.stack_mode {
-            StackMode::Vertical => {
-                let mut image: RgbImage = ImageBuffer::new(strip_length, frame_count as u32);
-                for (y, chunk) in raw_data.chunks(bytes_per_strip).enumerate() {
-                    for (x, pixel) in chunk.chunks(3).enumerate() {
-                        if pixel.len() == 3 && (x as u32) < strip_length {
-                            image.put_pixel(
-                                x as u32,
-                                y as u32,
-                                Rgb([pixel[0], pixel[1], pixel[2]]),
-                            );
-                        }
-                    }
-                }
-                image
-            }
-            StackMode::Horizontal => {
-                let mut image: RgbImage = ImageBuffer::new(frame_count as u32, strip_length);
-                for (x, chunk) in raw_data.chunks(bytes_per_strip).enumerate() {
-                    for (y, pixel) in chunk.chunks(3).enumerate() {
-                        if pixel.len() == 3 && (y as u32) < strip_length {
-                            image.put_pixel(
-                                x as u32,
-                                y as u32,
-                                Rgb([pixel[0], pixel[1], pixel[2]]),
-                            );
-                        }
-                    }
-                }
-                image
-            }
-        }
     }
 }

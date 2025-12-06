@@ -4,16 +4,29 @@ CLI-Tool zur Generierung von Filmspektrum-Bildern aus Videodateien.
 
 #### Funktionsweise
 
-Filmspec sampelt gleichmäßig Frames aus einer Videodatei über die Zeit, extrahiert eine Pixellinie (Zeile oder Spalte) aus jedem Frame und stapelt sie zusammen, um ein einzigartiges visuelles Spektrum zu erstellen.
+Filmspec sampelt gleichmäßig Frames aus einer Videodatei über die Zeit, verarbeitet jeden Frame gemäß dem ausgewählten Modus und erstellt ein einzigartiges visuelles Spektrum.
 
-![example](images/example.png)
+**Slice-Modus** - Extrahiert Pixellinien aus jedem Frame:
+
+![Slice-Beispiel](images/example_slice.png)
+
+**Hue-Modus** - Analysiert die dominante Farbe jedes Frames:
+
+![Hue-Beispiel](images/example_hue.png)
+
+#### Verarbeitungsmodi
+
+| Modus | Beschreibung |
+|-------|--------------|
+| slice | Extrahiert eine Pixellinie (Zeile oder Spalte) aus jedem Frame und stapelt sie |
+| hue | Analysiert die dominante Farbe jedes Frames und erstellt ein Farbband-Spektrum |
 
 #### Sampling- und Layout-Modi
 
-| Slice-Modus | Beschreibung |
-|-------------|--------------|
-| row | Mittlere horizontale Linie aus jedem Frame extrahieren |
-| col | Mittlere vertikale Linie aus jedem Frame extrahieren |
+| Sample-Modus | Beschreibung |
+|--------------|--------------|
+| row | Mittlere horizontale Linie aus jedem Frame extrahieren (nur Slice-Modus) |
+| col | Mittlere vertikale Linie aus jedem Frame extrahieren (nur Slice-Modus) |
 
 | Layout-Modus | Beschreibung |
 |--------------|--------------|
@@ -42,17 +55,21 @@ filmspec <INPUT> [OPTIONS]
 | Option | Kurz | Beschreibung | Standard |
 |--------|------|--------------|----------|
 | `<INPUT>` | - | Eingabe-Videodateipfad | erforderlich |
-| `--output` | `-o` | Ausgabe-Bildpfad | `<Dateiname>_spectrum.png` |
+| `--output` | `-o` | Ausgabe-Bildpfad | `<Dateiname>_spectrum.png` oder `<Dateiname>_hue.png` |
 | `--width` | `-w` | Ausgabe-Bildbreite | 1920 |
 | `--height` | `-H` | Ausgabe-Bildhöhe | 300 |
-| `--layout` | `-l` | Layout-Richtung h/v | h |
-| `--slice` | `-s` | Slice-Richtung row/col | row |
+| `--mode` | `-m` | Verarbeitungsmodus: slice/hue | slice |
+| `--layout` | `-l` | Layout-Richtung: h/v | h |
+| `--sample` | `-s` | Sample-Richtung: row/col (nur Slice-Modus) | row |
 
 #### Beispiele
 
 ```bash
-# Standard (1920×300, horizontales Layout, Zeilen-Slice)
+# Standard Slice-Modus (1920×300, horizontales Layout, Zeilen-Sample)
 filmspec movie.mp4
+
+# Farbton-Spektrum-Modus (dominante Farbanalyse)
+filmspec movie.mp4 -m hue
 
 # Benutzerdefinierter Ausgabepfad und Größe
 filmspec movie.mp4 -o output.png -w 1280 -H 400
@@ -60,11 +77,13 @@ filmspec movie.mp4 -o output.png -w 1280 -H 400
 # Vertikales Layout (von oben nach unten stapeln)
 filmspec movie.mp4 -l v
 
-# Spalten-Slice (vertikale Pixellinien extrahieren)
+# Spalten-Sample im Slice-Modus (vertikale Pixellinien extrahieren)
 filmspec movie.mp4 -s col
+
+# Hue-Modus + vertikales Layout
+filmspec movie.mp4 -m hue -l v -w 400 -H 1920
 ```
 
 #### Lizenz
 
 MIT
-

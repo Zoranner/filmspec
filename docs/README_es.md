@@ -4,16 +4,29 @@ Herramienta CLI para generar imágenes de espectro de películas a partir de arc
 
 #### Cómo Funciona
 
-Filmspec muestrea uniformemente fotogramas de un archivo de video a lo largo del tiempo, extrae una línea de píxeles (fila o columna) de cada fotograma y los apila para crear un espectro visual único.
+Filmspec muestrea uniformemente fotogramas de un archivo de video a lo largo del tiempo, procesa cada fotograma según el modo seleccionado y genera un espectro visual único.
 
-![example](images/example.png)
+**Modo Slice** - Extrae líneas de píxeles de cada fotograma:
+
+![ejemplo slice](images/example_slice.png)
+
+**Modo Hue** - Analiza el color dominante de cada fotograma:
+
+![ejemplo hue](images/example_hue.png)
+
+#### Modos de Procesamiento
+
+| Modo | Descripción |
+|------|-------------|
+| slice | Extrae una línea de píxeles (fila o columna) de cada fotograma y las apila |
+| hue | Analiza el color dominante de cada fotograma y crea un espectro de bandas de color |
 
 #### Modos de Muestreo y Diseño
 
-| Modo de Corte | Descripción |
-|---------------|-------------|
-| row | Extrae la línea horizontal central de cada fotograma |
-| col | Extrae la línea vertical central de cada fotograma |
+| Modo de Muestreo | Descripción |
+|------------------|-------------|
+| row | Extrae la línea horizontal central de cada fotograma (solo modo slice) |
+| col | Extrae la línea vertical central de cada fotograma (solo modo slice) |
 
 | Modo de Diseño | Descripción |
 |----------------|-------------|
@@ -42,17 +55,21 @@ filmspec <INPUT> [OPTIONS]
 | Opción | Corto | Descripción | Predeterminado |
 |--------|-------|-------------|----------------|
 | `<INPUT>` | - | Ruta del archivo de video | requerido |
-| `--output` | `-o` | Ruta de la imagen de salida | `<nombre>_spectrum.png` |
+| `--output` | `-o` | Ruta de la imagen de salida | `<nombre>_spectrum.png` o `<nombre>_hue.png` |
 | `--width` | `-w` | Ancho de la imagen | 1920 |
 | `--height` | `-H` | Alto de la imagen | 300 |
-| `--layout` | `-l` | Dirección del diseño h/v | h |
-| `--slice` | `-s` | Dirección del corte row/col | row |
+| `--mode` | `-m` | Modo de procesamiento: slice/hue | slice |
+| `--layout` | `-l` | Dirección del diseño: h/v | h |
+| `--sample` | `-s` | Dirección de muestreo: row/col (solo modo slice) | row |
 
 #### Ejemplos
 
 ```bash
-# Predeterminado (1920×300, diseño horizontal, corte por fila)
+# Modo slice predeterminado (1920×300, diseño horizontal, muestreo por fila)
 filmspec movie.mp4
+
+# Modo espectro de tonalidad (análisis de color dominante)
+filmspec movie.mp4 -m hue
 
 # Ruta y tamaño personalizados
 filmspec movie.mp4 -o output.png -w 1280 -H 400
@@ -60,11 +77,13 @@ filmspec movie.mp4 -o output.png -w 1280 -H 400
 # Diseño vertical (apilar de arriba a abajo)
 filmspec movie.mp4 -l v
 
-# Corte por columna (extraer líneas de píxeles verticales)
+# Muestreo por columna en modo slice (extraer líneas de píxeles verticales)
 filmspec movie.mp4 -s col
+
+# Modo hue + diseño vertical
+filmspec movie.mp4 -m hue -l v -w 400 -H 1920
 ```
 
 #### Licencia
 
 MIT
-

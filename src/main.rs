@@ -1,8 +1,12 @@
+//! Filmspec CLI
+//!
+//! 从视频文件生成光谱图像的命令行工具。
+
 use std::path::PathBuf;
 
 use clap::Parser;
 
-use filmspec::{Processor, ProcessorConfig, Result, SampleMode, StackMode};
+use filmspec::{LayoutMode, ProcessMode, Processor, ProcessorConfig, Result, SampleMode};
 
 #[derive(Parser)]
 #[command(name = "filmspec")]
@@ -28,13 +32,20 @@ struct Cli {
     #[arg(short, long, default_value = "h")]
     layout: String,
 
-    /// Slice direction: row (middle horizontal line) or col (middle vertical line)
+    /// Sample direction: row (middle horizontal line) or col (middle vertical line)
+    /// Only used in slice mode
     #[arg(short, long, default_value = "row")]
-    slice: String,
+    sample: String,
+
+    /// Process mode: slice (pixel lines) or hue (dominant color spectrum)
+    #[arg(short, long, default_value = "slice")]
+    mode: String,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    let process_mode = ProcessMode::from_str(&cli.mode);
 
     let output_path = cli.output.unwrap_or_else(|| {
         let stem = cli
@@ -42,29 +53,27 @@ fn main() -> Result<()> {
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("spectrum");
-        PathBuf::from(format!("{}_spectrum.png", stem))
+        PathBuf::from(format!("{}{}.png", stem, process_mode.output_suffix()))
     });
 
-    let sample_mode = match cli.slice.to_lowercase().as_str() {
-        "column" | "col" | "c" => SampleMode::Column,
-        _ => SampleMode::Row,
+    let sample_mode = SampleMode::from_str(&cli.sample);
+
+    let layout_mode = match cli.layout.to_lowercase().as_str() {
+        "vertical" | "v" => LayoutMode::Vertical,
+        _ => LayoutMode::Horizontal,
     };
 
-    let stack_mode = match cli.layout.to_lowercase().as_str() {
-        "vertical" | "v" => StackMode::Vertical,
-        _ => StackMode::Horizontal,
-    };
-
-    let (frame_count, strip_length) = match stack_mode {
-        StackMode::Horizontal => (cli.width, cli.height),
-        StackMode::Vertical => (cli.height, cli.width),
+    let (frame_count, band_length) = match layout_mode {
+        LayoutMode::Horizontal => (cli.width, cli.height),
+        LayoutMode::Vertical => (cli.height, cli.width),
     };
 
     let config = ProcessorConfig {
         frame_count,
-        strip_length,
+        band_length,
         sample_mode,
-        stack_mode,
+        layout_mode,
+        process_mode,
     };
 
     let processor = Processor::new(config);
@@ -76,7 +85,10 @@ fn main() -> Result<()> {
         cli.width,
         cli.height
     );
-    println!("Layout: {}, Slice: {}", cli.layout, cli.slice);
+    println!("Mode: {}, Layout: {}", process_mode.name(), cli.layout);
+    if matches!(process_mode, ProcessMode::Slice) {
+        println!("Sample: {}", cli.sample);
+    }
     println!();
 
     processor.generate_spectrum(&cli.input, &output_path)?;

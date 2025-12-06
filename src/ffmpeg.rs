@@ -6,7 +6,7 @@ use std::thread;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Deserialize;
 
-use crate::processor::SampleMode;
+use crate::mode::slice::SampleMode;
 use crate::{Error, Result};
 
 #[derive(Debug, Deserialize)]
@@ -80,7 +80,7 @@ impl FFmpeg {
     pub fn extract_strips_to_memory(
         video_path: &Path,
         frame_count: u32,
-        strip_length: u32,
+        band_length: u32,
         duration: f64,
         sample_mode: SampleMode,
     ) -> Result<Vec<u8>> {
@@ -89,11 +89,11 @@ impl FFmpeg {
         let vf = match sample_mode {
             SampleMode::Row => format!(
                 "fps={},scale={}:-1:flags=lanczos,crop={}:1:0:ih/2",
-                fps, strip_length, strip_length
+                fps, band_length, band_length
             ),
             SampleMode::Column => format!(
                 "fps={},scale=-1:{}:flags=lanczos,crop=1:{}:iw/2:0",
-                fps, strip_length, strip_length
+                fps, band_length, band_length
             ),
         };
 
@@ -127,7 +127,7 @@ impl FFmpeg {
             String::from_utf8_lossy(&buffer).to_string()
         });
 
-        let bytes_per_frame = strip_length as usize * 3;
+        let bytes_per_frame = band_length as usize * 3;
         let expected_total_bytes = frame_count as usize * bytes_per_frame;
 
         let progress_bar = ProgressBar::new(frame_count as u64);
@@ -164,5 +164,94 @@ impl FFmpeg {
         }
 
         Ok(raw_data)
+    }
+
+    /// 提取完整帧用于色调分析
+    /// 返回 (帧数据列表, 实际帧数)
+    pub fn extract_frames_to_memory(
+        video_path: &Path,
+        frame_count: u32,
+        width: u32,
+        height: u32,
+        duration: f64,
+    ) -> Result<(Vec<Vec<u8>>, usize)> {
+        let fps = frame_count as f64 / duration;
+
+        let vf = format!("fps={},scale={}:{}:flags=fast_bilinear", fps, width, height);
+
+        let mut child = Command::new("ffmpeg")
+            .args([
+                "-threads",
+                "0",
+                "-i",
+                video_path.to_str().unwrap_or_default(),
+                "-vf",
+                &vf,
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgb24",
+                "-v",
+                "quiet",
+                "-",
+            ])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+
+        let mut stdout = child.stdout.take().expect("Failed to capture stdout");
+        let stderr = child.stderr.take().expect("Failed to capture stderr");
+
+        let stderr_thread = thread::spawn(move || {
+            let mut buffer = Vec::new();
+            let mut reader = stderr;
+            reader.read_to_end(&mut buffer).ok();
+            String::from_utf8_lossy(&buffer).to_string()
+        });
+
+        let bytes_per_frame = (width * height * 3) as usize;
+        let expected_total_bytes = frame_count as usize * bytes_per_frame;
+
+        let progress_bar = ProgressBar::new(frame_count as u64);
+        progress_bar.set_style(
+            ProgressStyle::default_bar()
+                .template("{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} frames ({eta})")
+                .expect("Invalid progress bar template")
+                .progress_chars("█▓░"),
+        );
+
+        let mut raw_data = Vec::with_capacity(expected_total_bytes);
+        let mut buffer = [0u8; 65536];
+
+        loop {
+            match stdout.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(n) => {
+                    raw_data.extend_from_slice(&buffer[..n]);
+                    let current_frames = raw_data.len() / bytes_per_frame;
+                    progress_bar.set_position(current_frames as u64);
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                Err(_) => break,
+            }
+        }
+
+        progress_bar.finish_and_clear();
+
+        let stderr_output = stderr_thread.join().expect("stderr thread panicked");
+        let status = child.wait()?;
+
+        if !status.success() && raw_data.is_empty() {
+            return Err(Error::FFmpegExecution(stderr_output));
+        }
+
+        // 将原始数据分割成单独的帧
+        let actual_frame_count = raw_data.len() / bytes_per_frame;
+        let frames: Vec<Vec<u8>> = raw_data
+            .chunks(bytes_per_frame)
+            .map(|chunk| chunk.to_vec())
+            .collect();
+
+        Ok((frames, actual_frame_count))
     }
 }
