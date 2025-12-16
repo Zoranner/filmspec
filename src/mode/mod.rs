@@ -15,7 +15,7 @@ use std::str::FromStr;
 
 use image::DynamicImage;
 
-use crate::ffmpeg::VideoInfo;
+use crate::ffmpeg::{ProgressCallback, VideoInfo};
 use crate::Result;
 
 /// 布局方向
@@ -42,7 +42,7 @@ pub trait SpectrumMode {
     /// 输出文件后缀
     fn output_suffix(&self) -> &'static str;
 
-    /// 生成光谱图像
+    /// 生成光谱图像（CLI 版本，使用控制台进度条）
     fn generate(
         &self,
         video_path: &Path,
@@ -51,6 +51,29 @@ pub trait SpectrumMode {
         band_length: u32,
         inner_radius: u32,
         layout_mode: LayoutMode,
+    ) -> Result<DynamicImage> {
+        self.generate_with_progress(
+            video_path,
+            video_info,
+            frame_count,
+            band_length,
+            inner_radius,
+            layout_mode,
+            None,
+        )
+    }
+
+    /// 生成光谱图像（支持进度回调）
+    #[allow(clippy::too_many_arguments)]
+    fn generate_with_progress(
+        &self,
+        video_path: &Path,
+        video_info: &VideoInfo,
+        frame_count: u32,
+        band_length: u32,
+        inner_radius: u32,
+        layout_mode: LayoutMode,
+        progress_callback: Option<ProgressCallback>,
     ) -> Result<DynamicImage>;
 }
 

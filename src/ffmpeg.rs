@@ -1,6 +1,7 @@
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::Arc;
 use std::thread;
 
 use indicatif::{ProgressBar, ProgressStyle};
@@ -8,6 +9,10 @@ use serde::Deserialize;
 
 use crate::mode::slice::SampleMode;
 use crate::{Error, Result};
+
+/// 进度回调类型
+/// 参数: (当前阶段, 当前帧数, 总帧数, 进度 0.0-1.0)
+pub type ProgressCallback = Arc<dyn Fn(&str, u32, u32, f32) + Send + Sync>;
 
 #[derive(Debug, Deserialize)]
 struct FFprobeOutput {
@@ -77,12 +82,32 @@ impl FFmpeg {
         })
     }
 
+    /// 提取像素条数据到内存（CLI 版本，使用控制台进度条）
     pub fn extract_strips_to_memory(
         video_path: &Path,
         frame_count: u32,
         band_length: u32,
         duration: f64,
         sample_mode: SampleMode,
+    ) -> Result<Vec<u8>> {
+        Self::extract_strips_to_memory_with_progress(
+            video_path,
+            frame_count,
+            band_length,
+            duration,
+            sample_mode,
+            None,
+        )
+    }
+
+    /// 提取像素条数据到内存（支持进度回调）
+    pub fn extract_strips_to_memory_with_progress(
+        video_path: &Path,
+        frame_count: u32,
+        band_length: u32,
+        duration: f64,
+        sample_mode: SampleMode,
+        progress_callback: Option<ProgressCallback>,
     ) -> Result<Vec<u8>> {
         let fps = frame_count as f64 / duration;
 
@@ -130,13 +155,20 @@ impl FFmpeg {
         let bytes_per_frame = band_length as usize * 3;
         let expected_total_bytes = frame_count as usize * bytes_per_frame;
 
-        let progress_bar = ProgressBar::new(frame_count as u64);
-        progress_bar.set_style(
-            ProgressStyle::default_bar()
-                .template("→ Extracting frames {spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
-                .expect("Invalid progress bar template")
-                .progress_chars("█▓░"),
-        );
+        // 如果有回调就使用回调，否则使用控制台进度条
+        let use_console_progress = progress_callback.is_none();
+        let progress_bar = if use_console_progress {
+            let pb = ProgressBar::new(frame_count as u64);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("→ Extracting frames {spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
+                    .expect("Invalid progress bar template")
+                    .progress_chars("█▓░"),
+            );
+            Some(pb)
+        } else {
+            None
+        };
 
         let mut raw_data = Vec::with_capacity(expected_total_bytes);
         let mut buffer = [0u8; 65536];
@@ -147,7 +179,14 @@ impl FFmpeg {
                 Ok(n) => {
                     raw_data.extend_from_slice(&buffer[..n]);
                     let current_frames = raw_data.len() / bytes_per_frame;
-                    progress_bar.set_position(current_frames as u64);
+
+                    if let Some(ref pb) = progress_bar {
+                        pb.set_position(current_frames as u64);
+                    }
+                    if let Some(ref callback) = progress_callback {
+                        let progress = current_frames as f32 / frame_count as f32;
+                        callback("提取帧数据", current_frames as u32, frame_count, progress);
+                    }
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
                 Err(_) => break,
@@ -155,12 +194,15 @@ impl FFmpeg {
         }
 
         let actual_frames = raw_data.len() / bytes_per_frame;
-        progress_bar.set_style(
-            ProgressStyle::default_bar()
-                .template("→ Extracting frames {msg}")
-                .expect("Invalid progress bar template"),
-        );
-        progress_bar.finish_with_message(format!("done ({} frames)", actual_frames));
+
+        if let Some(ref pb) = progress_bar {
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("→ Extracting frames {msg}")
+                    .expect("Invalid progress bar template"),
+            );
+            pb.finish_with_message(format!("done ({} frames)", actual_frames));
+        }
 
         let stderr_output = stderr_thread.join().expect("stderr thread panicked");
         let status = child.wait()?;
@@ -172,7 +214,7 @@ impl FFmpeg {
         Ok(raw_data)
     }
 
-    /// 提取完整帧用于色调分析
+    /// 提取完整帧用于色调分析（CLI 版本，使用控制台进度条）
     /// 返回 (帧数据列表, 实际帧数)
     pub fn extract_frames_to_memory(
         video_path: &Path,
@@ -180,6 +222,26 @@ impl FFmpeg {
         width: u32,
         height: u32,
         duration: f64,
+    ) -> Result<(Vec<Vec<u8>>, usize)> {
+        Self::extract_frames_to_memory_with_progress(
+            video_path,
+            frame_count,
+            width,
+            height,
+            duration,
+            None,
+        )
+    }
+
+    /// 提取完整帧用于色调分析（支持进度回调）
+    /// 返回 (帧数据列表, 实际帧数)
+    pub fn extract_frames_to_memory_with_progress(
+        video_path: &Path,
+        frame_count: u32,
+        width: u32,
+        height: u32,
+        duration: f64,
+        progress_callback: Option<ProgressCallback>,
     ) -> Result<(Vec<Vec<u8>>, usize)> {
         let fps = frame_count as f64 / duration;
 
@@ -218,13 +280,20 @@ impl FFmpeg {
         let bytes_per_frame = (width * height * 3) as usize;
         let expected_total_bytes = frame_count as usize * bytes_per_frame;
 
-        let progress_bar = ProgressBar::new(frame_count as u64);
-        progress_bar.set_style(
-            ProgressStyle::default_bar()
-                .template("→ Extracting frames {spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
-                .expect("Invalid progress bar template")
-                .progress_chars("█▓░"),
-        );
+        // 如果有回调就使用回调，否则使用控制台进度条
+        let use_console_progress = progress_callback.is_none();
+        let progress_bar = if use_console_progress {
+            let pb = ProgressBar::new(frame_count as u64);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("→ Extracting frames {spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
+                    .expect("Invalid progress bar template")
+                    .progress_chars("█▓░"),
+            );
+            Some(pb)
+        } else {
+            None
+        };
 
         let mut raw_data = Vec::with_capacity(expected_total_bytes);
         let mut buffer = [0u8; 65536];
@@ -235,7 +304,14 @@ impl FFmpeg {
                 Ok(n) => {
                     raw_data.extend_from_slice(&buffer[..n]);
                     let current_frames = raw_data.len() / bytes_per_frame;
-                    progress_bar.set_position(current_frames as u64);
+
+                    if let Some(ref pb) = progress_bar {
+                        pb.set_position(current_frames as u64);
+                    }
+                    if let Some(ref callback) = progress_callback {
+                        let progress = current_frames as f32 / frame_count as f32;
+                        callback("提取帧数据", current_frames as u32, frame_count, progress);
+                    }
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
                 Err(_) => break,
@@ -243,12 +319,15 @@ impl FFmpeg {
         }
 
         let actual_frames = raw_data.len() / bytes_per_frame;
-        progress_bar.set_style(
-            ProgressStyle::default_bar()
-                .template("→ Extracting frames {msg}")
-                .expect("Invalid progress bar template"),
-        );
-        progress_bar.finish_with_message(format!("done ({} frames)", actual_frames));
+
+        if let Some(ref pb) = progress_bar {
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("→ Extracting frames {msg}")
+                    .expect("Invalid progress bar template"),
+            );
+            pb.finish_with_message(format!("done ({} frames)", actual_frames));
+        }
 
         let stderr_output = stderr_thread.join().expect("stderr thread panicked");
         let status = child.wait()?;

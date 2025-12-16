@@ -35,10 +35,13 @@ pub mod color;
 mod error;
 mod ffmpeg;
 pub mod mode;
-mod processor;
+pub mod processor;
+
+#[cfg(feature = "gui")]
+pub mod gui;
 
 pub use error::Error;
-pub use ffmpeg::FFmpeg;
+pub use ffmpeg::{FFmpeg, ProgressCallback};
 pub use mode::slice::SampleMode;
 pub use mode::{LayoutMode, ProcessMode};
 pub use processor::{Processor, ProcessorConfig};

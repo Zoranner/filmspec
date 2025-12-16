@@ -13,8 +13,8 @@ use filmspec::{LayoutMode, ProcessMode, Processor, ProcessorConfig, Result, Samp
 #[command(about = "Generate film spectrum from video files")]
 #[command(version)]
 struct Cli {
-    /// Input video file path
-    input: PathBuf,
+    /// Input video file path (if not provided, launches GUI)
+    input: Option<PathBuf>,
 
     /// Output image path
     #[arg(short, long)]
@@ -44,16 +44,37 @@ struct Cli {
     /// Process mode: slice (pixel lines) or hue (dominant color spectrum)
     #[arg(short, long, default_value = "slice")]
     mode: String,
+
+    /// Force CLI mode (skip GUI even without input file)
+    #[arg(long)]
+    cli: bool,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    // 如果没有提供输入文件且未强制 CLI 模式，启动 GUI
+    #[cfg(feature = "gui")]
+    if cli.input.is_none() && !cli.cli {
+        filmspec::gui::run_gui();
+        return Ok(());
+    }
+
+    // CLI 模式
+    let input = match cli.input {
+        Some(path) => path,
+        None => {
+            eprintln!("Error: 请提供输入视频文件路径");
+            eprintln!("使用方法: filmspec <input> [options]");
+            eprintln!("或直接运行 filmspec 启动图形界面");
+            std::process::exit(1);
+        }
+    };
+
     let process_mode: ProcessMode = cli.mode.parse().unwrap();
 
     let output_path = cli.output.unwrap_or_else(|| {
-        let stem = cli
-            .input
+        let stem = input
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("spectrum");
@@ -101,7 +122,7 @@ fn main() -> Result<()> {
     let processor = Processor::new(config);
 
     // 打印配置信息
-    println!("Input:  {}", cli.input.display());
+    println!("Input:  {}", input.display());
     println!("Output: {}", output_path.display());
 
     match layout_mode {
@@ -118,14 +139,24 @@ fn main() -> Result<()> {
             );
         }
         LayoutMode::Horizontal => {
-            print!("Config: {} | Horizontal {}×{}", process_mode.name(), width, height);
+            print!(
+                "Config: {} | Horizontal {}×{}",
+                process_mode.name(),
+                width,
+                height
+            );
             if matches!(process_mode, ProcessMode::Slice) {
                 print!(" | sample: {}", cli.sample);
             }
             println!();
         }
         LayoutMode::Vertical => {
-            print!("Config: {} | Vertical {}×{}", process_mode.name(), height, width);
+            print!(
+                "Config: {} | Vertical {}×{}",
+                process_mode.name(),
+                height,
+                width
+            );
             if matches!(process_mode, ProcessMode::Slice) {
                 print!(" | sample: {}", cli.sample);
             }
@@ -134,7 +165,7 @@ fn main() -> Result<()> {
     }
     println!();
 
-    processor.generate_spectrum(&cli.input, &output_path)?;
+    processor.generate_spectrum(&input, &output_path)?;
 
     println!("Done!");
 

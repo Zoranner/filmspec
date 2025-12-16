@@ -9,7 +9,7 @@ use image::{DynamicImage, Rgb};
 use super::layout::render_spectrum;
 use super::{LayoutMode, SpectrumMode};
 use crate::color::HueHistogram;
-use crate::ffmpeg::VideoInfo;
+use crate::ffmpeg::{ProgressCallback, VideoInfo};
 use crate::{Error, FFmpeg, Result};
 
 /// 色调分析采样尺寸
@@ -47,7 +47,7 @@ impl SpectrumMode for HueMode {
         "_hue"
     }
 
-    fn generate(
+    fn generate_with_progress(
         &self,
         video_path: &Path,
         video_info: &VideoInfo,
@@ -55,20 +55,27 @@ impl SpectrumMode for HueMode {
         band_length: u32,
         inner_radius: u32,
         layout_mode: LayoutMode,
+        progress_callback: Option<ProgressCallback>,
     ) -> Result<DynamicImage> {
-        let (frames_data, actual_frame_count) = FFmpeg::extract_frames_to_memory(
+        let (frames_data, actual_frame_count) = FFmpeg::extract_frames_to_memory_with_progress(
             video_path,
             frame_count,
             SAMPLE_WIDTH,
             SAMPLE_HEIGHT,
             video_info.duration,
+            progress_callback.clone(),
         )?;
 
         if actual_frame_count == 0 {
             return Err(Error::NoFramesExtracted);
         }
 
-        println!("→ Analyzing colors...");
+        // 通知进入颜色分析阶段
+        if let Some(ref callback) = progress_callback {
+            callback("分析颜色", 0, 1, 0.85);
+        } else {
+            println!("→ Analyzing colors...");
+        }
 
         // 计算每帧的主色调
         let dominant_colors: Vec<Rgb<u8>> = frames_data
@@ -76,7 +83,12 @@ impl SpectrumMode for HueMode {
             .map(|frame_data| calculate_dominant_hue(frame_data))
             .collect();
 
-        println!("→ Building spectrum...");
+        // 通知进入渲染阶段
+        if let Some(ref callback) = progress_callback {
+            callback("生成光谱图像", 0, 1, 0.9);
+        } else {
+            println!("→ Building spectrum...");
+        }
 
         // 使用统一的布局渲染函数
         // 色调模式下，整个径向使用同一颜色

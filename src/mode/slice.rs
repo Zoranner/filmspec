@@ -9,7 +9,7 @@ use image::{DynamicImage, Rgb};
 
 use super::layout::render_spectrum;
 use super::{LayoutMode, SpectrumMode};
-use crate::ffmpeg::VideoInfo;
+use crate::ffmpeg::{ProgressCallback, VideoInfo};
 use crate::{Error, FFmpeg, Result};
 
 /// 采样方向
@@ -55,7 +55,7 @@ impl SpectrumMode for SliceMode {
         "_spectrum"
     }
 
-    fn generate(
+    fn generate_with_progress(
         &self,
         video_path: &Path,
         video_info: &VideoInfo,
@@ -63,13 +63,15 @@ impl SpectrumMode for SliceMode {
         band_length: u32,
         inner_radius: u32,
         layout_mode: LayoutMode,
+        progress_callback: Option<ProgressCallback>,
     ) -> Result<DynamicImage> {
-        let raw_data = FFmpeg::extract_strips_to_memory(
+        let raw_data = FFmpeg::extract_strips_to_memory_with_progress(
             video_path,
             frame_count,
             band_length,
             video_info.duration,
             self.sample_mode,
+            progress_callback.clone(),
         )?;
 
         let bytes_per_strip = band_length as usize * 3;
@@ -79,7 +81,12 @@ impl SpectrumMode for SliceMode {
             return Err(Error::NoFramesExtracted);
         }
 
-        println!("→ Building spectrum...");
+        // 通知进入渲染阶段
+        if let Some(ref callback) = progress_callback {
+            callback("生成光谱图像", 0, 1, 0.9);
+        } else {
+            println!("→ Building spectrum...");
+        }
 
         // 使用统一的布局渲染函数
         let image = render_spectrum(

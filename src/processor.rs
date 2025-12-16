@@ -4,6 +4,7 @@
 
 use std::path::Path;
 
+use crate::ffmpeg::ProgressCallback;
 use crate::mode::hue::HueMode;
 use crate::mode::slice::{SampleMode, SliceMode};
 use crate::mode::{LayoutMode, ProcessMode, SpectrumMode};
@@ -36,8 +37,18 @@ impl Processor {
         Self { config }
     }
 
-    /// 生成光谱图像
+    /// 生成光谱图像（CLI 版本，使用控制台进度条）
     pub fn generate_spectrum(&self, video_path: &Path, output_path: &Path) -> Result<()> {
+        self.generate_spectrum_with_progress(video_path, output_path, None)
+    }
+
+    /// 生成光谱图像（支持进度回调）
+    pub fn generate_spectrum_with_progress(
+        &self,
+        video_path: &Path,
+        output_path: &Path,
+        progress_callback: Option<ProgressCallback>,
+    ) -> Result<()> {
         FFmpeg::check_availability()?;
 
         let video_info = FFmpeg::get_video_info(video_path)?;
@@ -46,29 +57,37 @@ impl Processor {
         let image = match self.config.process_mode {
             ProcessMode::Slice => {
                 let mode = SliceMode::new(self.config.sample_mode);
-                mode.generate(
+                mode.generate_with_progress(
                     video_path,
                     &video_info,
                     self.config.frame_count,
                     self.config.band_length,
                     self.config.inner_radius,
                     self.config.layout_mode,
+                    progress_callback.clone(),
                 )?
             }
             ProcessMode::Hue => {
                 let mode = HueMode::new();
-                mode.generate(
+                mode.generate_with_progress(
                     video_path,
                     &video_info,
                     self.config.frame_count,
                     self.config.band_length,
                     self.config.inner_radius,
                     self.config.layout_mode,
+                    progress_callback.clone(),
                 )?
             }
         };
 
-        println!("→ Saving image...");
+        // 通知进入保存阶段
+        if let Some(ref callback) = progress_callback {
+            callback("保存图像", 0, 1, 0.95);
+        } else {
+            println!("→ Saving image...");
+        }
+
         image.save(output_path)?;
         Ok(())
     }
