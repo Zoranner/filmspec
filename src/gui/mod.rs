@@ -3,7 +3,6 @@
 //! 使用 GPUI + gpui-component 框架构建的桌面应用界面
 
 pub mod app;
-pub mod state;
-mod views;
+mod components;
 
 pub use app::run_gui;
